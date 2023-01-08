@@ -6,23 +6,39 @@
  * @see https://www.youtube.com/watch?v=ASoaQq66foQ
  */
 
-type DiffItem<T> = {o: 'added' | 'removed' | 'same', v: T};
+export enum DiffItemType {
+    added,
+    removed,
+    same,
+}
+
+type DiffItem<T> = {o: DiffItemType, v: T};
 
 type LcsResult<T> = {seq: T[], len: number, diff: Array<DiffItem<T>>};
 
+/**
+ * Calculates the Longest Common Subsequence of 2 arrays.
+ * It also calculates the diff of x -> y along the way.
+ * @param x first array
+ * @param y second array
+ * @param xl starting length of x
+ * @param yl starting length of y
+ * @param cache
+ * @returns
+ */
 export function calcLcs<T>(x: T[], y: T[], xl: number = x.length, yl: number = y.length, cache: Record<number, LcsResult<T>> = {}): LcsResult<T> {
     if (xl === 0) {
         return {
             len: 0,
             seq: [],
-            diff: y.slice(0, yl).map(v => ({o: 'added', v})),
+            diff: y.slice(0, yl).map(v => ({o: DiffItemType.added, v})),
         };
     }
     if (yl === 0) {
         return {
             len: 0,
             seq: [],
-            diff: x.slice(0, xl).map(v => ({o: 'removed', v})),
+            diff: x.slice(0, xl).map(v => ({o: DiffItemType.removed, v})),
         };
     }
     const cacheKey = yl * x.length + xl;
@@ -34,7 +50,7 @@ export function calcLcs<T>(x: T[], y: T[], xl: number = x.length, yl: number = y
         cache[cacheKey] = {
             len: 1 + r.len,
             seq: r.seq.concat(x[xl - 1]),
-            diff: r.diff.concat({o: 'same', v: x[xl - 1]}),
+            diff: r.diff.concat({o: DiffItemType.same, v: x[xl - 1]}),
         };
     } else {
         const r1 = calcLcs(x, y, xl, yl - 1, cache);
@@ -43,13 +59,13 @@ export function calcLcs<T>(x: T[], y: T[], xl: number = x.length, yl: number = y
             cache[cacheKey] = {
                 len: r1.len,
                 seq: r1.seq,
-                diff: r1.diff.concat({o: 'added', v: y[yl - 1]})
+                diff: r1.diff.concat({o: DiffItemType.added, v: y[yl - 1]})
             };
         } else {
             cache[cacheKey] = {
                 len: r2.len,
                 seq: r2.seq,
-                diff: r2.diff.concat({o: 'removed', v: x[xl - 1]})
+                diff: r2.diff.concat({o: DiffItemType.removed, v: x[xl - 1]})
             };
         }
     }
@@ -58,12 +74,22 @@ export function calcLcs<T>(x: T[], y: T[], xl: number = x.length, yl: number = y
 
 export function applyLcsPatch<T>(diff: DiffItem<T>[]): T[] {
     return diff
-        .filter(i => i.o === 'added' || i.o === 'same')
+        .filter(i => i.o === DiffItemType.added || i.o === DiffItemType.same)
         .map(i => i.v);
 }
 
+export enum CompactDiffItemType {
+    added,
+    removed,
+    same,
+    modified,
+}
 
-type CompactDiffItem<T> = {o: 'added', nv: T} | {o: 'removed', ov: T} | {o: 'same', v: T} | {o: 'modified', ov: T, nv: T};
+type CompactDiffItem<T> =
+    | {o: CompactDiffItemType.added, nv: T}
+    | {o: CompactDiffItemType.removed, ov: T}
+    | {o: CompactDiffItemType.same, v: T}
+    | {o: CompactDiffItemType.modified, ov: T, nv: T};
 
 export function compactDiff<T>(lcsDiff: DiffItem<T>[]): CompactDiffItem<T>[] {
     const result: CompactDiffItem<T>[] = [];
@@ -73,11 +99,11 @@ export function compactDiff<T>(lcsDiff: DiffItem<T>[]): CompactDiffItem<T>[] {
     function flush() {
         for (let i = 0; i < Math.max(curAdded.length, curRemoved.length); i++) {
             if (i >= curAdded.length) {
-                result.push({o: 'removed', ov: curRemoved[i]});
+                result.push({o: CompactDiffItemType.removed, ov: curRemoved[i]});
             } else if (i >= curRemoved.length) {
-                result.push({o: 'added', nv: curAdded[i]});
+                result.push({o: CompactDiffItemType.added, nv: curAdded[i]});
             } else {
-                result.push({o: 'modified', ov: curRemoved[i], nv: curAdded[i]});
+                result.push({o: CompactDiffItemType.modified, ov: curRemoved[i], nv: curAdded[i]});
             }
         }
         curAdded = [];
@@ -85,15 +111,15 @@ export function compactDiff<T>(lcsDiff: DiffItem<T>[]): CompactDiffItem<T>[] {
     }
 
     lcsDiff.forEach(diffItem => {
-        if (diffItem.o === 'same') {
+        if (diffItem.o === DiffItemType.same) {
             flush();
-            result.push({o: 'same', v: diffItem.v});
+            result.push({o: CompactDiffItemType.same, v: diffItem.v});
             return;
         }
-        if (diffItem.o === 'added') {
+        if (diffItem.o === DiffItemType.added) {
             curAdded.push(diffItem.v);
         }
-        if (diffItem.o === 'removed') {
+        if (diffItem.o === DiffItemType.removed) {
             curRemoved.push(diffItem.v);
         }
     });
@@ -127,28 +153,28 @@ class JsonHashStore {
     }
 }
 
-function compactDiffMap<T, R>(cd: CompactDiffItem<T>[], fn: (input: T) => R): CompactDiffItem<R>[] {
+export function compactDiffMap<T, R>(cd: CompactDiffItem<T>[], fn: (input: T) => R): CompactDiffItem<R>[] {
     return cd.map(i => {
         const opType = i.o;
-        if (opType === 'added') {
+        if (opType === CompactDiffItemType.added) {
             return {
-                o: 'added',
+                o: CompactDiffItemType.added,
                 nv: fn(i.nv),
             };
-        } else if (opType === 'removed') {
+        } else if (opType === CompactDiffItemType.removed) {
             return {
-                o: 'removed',
+                o: CompactDiffItemType.removed,
                 ov: fn(i.ov),
             };
-        } else if (opType === 'modified') {
+        } else if (opType === CompactDiffItemType.modified) {
             return {
-                o: 'modified',
+                o: CompactDiffItemType.modified,
                 ov: fn(i.ov),
                 nv: fn(i.nv),
             };
-        } else if (opType === 'same') {
+        } else if (opType === CompactDiffItemType.same) {
             return {
-                o: 'same',
+                o: CompactDiffItemType.same,
                 v: fn(i.v),
             };
         }

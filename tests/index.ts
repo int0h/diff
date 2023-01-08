@@ -1,6 +1,5 @@
-import {test} from 'node:test';
-import assert from 'assert';
-import {applyLcsPatch, calcLcs} from '../';
+import test from 'tape';
+import {applyLcsPatch, calcLcs, DiffItemType} from '../';
 
 type LcsCase = {
     os: string;
@@ -9,7 +8,7 @@ type LcsCase = {
     diff: string;
 }
 
-test('lcs tests', () => {
+test('lcs tests', t => {
     const cases: LcsCase[] = [
         {
             os: 'abc',
@@ -59,19 +58,21 @@ test('lcs tests', () => {
         const a = c.os.split('');
         const b = c.ns.split('');
         const res = calcLcs(a, b);
-        assert.equal(res.seq.join(''), c.lcs, `LCS(${c.os}, ${c.ns}) -> ${c.lcs}`);
+        t.equal(res.seq.join(''), c.lcs, `LCS(${c.os}, ${c.ns}) -> ${c.lcs}`);
         const diffStr = res.diff
             .map(i => {
-                if (i.o === 'added') {
+                if (i.o === DiffItemType.added) {
                     return `[+${i.v}]`;
-                } else if (i.o === 'removed') {
+                } else if (i.o === DiffItemType.removed) {
                     return `[-${i.v}]`;
                 } else {
                     return i.v;
                 }
             })
             .join('')
-        assert.equal(diffStr, c.diff, `DIFF(${c.os}, ${c.ns}) -> ${diffStr} EXPECT ${c.diff}`);
-        assert.equal(applyLcsPatch(res.diff).join(''), c.ns);
+        t.equal(diffStr, c.diff, `DIFF(${c.os}, ${c.ns}) -> ${diffStr} EXPECT ${c.diff}`);
+        t.equal(applyLcsPatch(res.diff).join(''), c.ns);
     });
+
+    t.end();
 });
