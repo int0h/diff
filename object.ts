@@ -102,7 +102,8 @@ export function calcDiff(originalValue: any, newValue: any): Diff<any> {
                 if (i.o === CompactDiffItemType.modified) {
                     return calcDiff(i.ov, i.nv);
                 }
-                throw new Error('todo');
+                const _: never = i;
+                throw new Error('invalid diff type');
             }),
         };
     }

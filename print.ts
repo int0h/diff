@@ -1,24 +1,24 @@
 import { Diff, DiffType } from "./object";
 
-type Line = {
+export type DiffJsonLine = {
     str: string;
     type: 'added' | 'removed' | 'same';
 }
 
-function identLines(lines: Line[], ident: string): Line[] {
+function identLines(lines: DiffJsonLine[], ident: string): DiffJsonLine[] {
     return lines.map((l) => ({
         str: ident + l.str,
         type: l.type,
     }));
 }
 
-function toJsonLines(obj: any, type: 'added' | 'removed' | 'same', ident: string, firstLinePrefix: string = ''): Line[] {
+function toJsonLines(obj: any, type: 'added' | 'removed' | 'same', ident: string, firstLinePrefix: string = ''): DiffJsonLine[] {
     return (firstLinePrefix + JSON.stringify(obj, null, ident))
         .split('\n')
         .map(str => ({str, type}))
 }
 
-function toEmptyLines(obj: any, type: 'added' | 'removed' | 'same'): Line[] {
+function toEmptyLines(obj: any, type: 'added' | 'removed' | 'same'): DiffJsonLine[] {
     return JSON.stringify(obj, null, 4)
         .split('\n')
         .map(() => ({str: ' '.repeat(4), type}))
@@ -32,7 +32,7 @@ type PrepareJsonDiffParams = {
     firstLinePrefix?: string;
 }
 
-export function prepareJsonDiff({diff, ident, viewSide, leaveSpace, firstLinePrefix}: PrepareJsonDiffParams): Line[] {
+export function diffToLines({diff, ident, viewSide, leaveSpace, firstLinePrefix = ''}: PrepareJsonDiffParams): DiffJsonLine[] {
     if (diff.type === DiffType.same) {
         return toJsonLines(diff.originalValue, 'same', ident, firstLinePrefix);
     }
@@ -76,7 +76,7 @@ export function prepareJsonDiff({diff, ident, viewSide, leaveSpace, firstLinePre
     if (diff.type === DiffType.objectDiff) {
         const pairs = Object.entries(diff.properties);
         return [
-            {str: '{', type: 'same'},
+            {str: firstLinePrefix + '{', type: 'same'},
             ...pairs.map(([key, propDiff], index) => {
                 if (leaveSpace && propDiff.type === DiffType.added && viewSide === 'old') {
                     return toEmptyLines(propDiff.newValue, 'same');
@@ -84,7 +84,7 @@ export function prepareJsonDiff({diff, ident, viewSide, leaveSpace, firstLinePre
                 if (leaveSpace && propDiff.type === DiffType.removed && viewSide === 'new') {
                     return toEmptyLines(propDiff.originalValue, 'same');
                 }
-                const propDiffLines = identLines(prepareJsonDiff({
+                const propDiffLines = identLines(diffToLines({
                     diff: propDiff,
                     viewSide,
                     ident,
@@ -100,7 +100,7 @@ export function prepareJsonDiff({diff, ident, viewSide, leaveSpace, firstLinePre
     }
     if (diff.type === DiffType.arrayDiff) {
         return [
-            {str: '[', type: 'same'},
+            {str: firstLinePrefix + '[', type: 'same'},
             ...diff.items.map((itemDiff, index) => {
                 if (leaveSpace && itemDiff.type === DiffType.added && viewSide === 'old') {
                     return toEmptyLines(itemDiff.newValue, 'same');
@@ -108,7 +108,7 @@ export function prepareJsonDiff({diff, ident, viewSide, leaveSpace, firstLinePre
                 if (leaveSpace && itemDiff.type === DiffType.removed && viewSide === 'new') {
                     return toEmptyLines(itemDiff.originalValue, 'same');
                 }
-                const propDiffLines = identLines(prepareJsonDiff({
+                const propDiffLines = identLines(diffToLines({
                     diff: itemDiff,
                     viewSide,
                     ident,
