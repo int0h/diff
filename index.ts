@@ -26,7 +26,7 @@ type LcsResult<T> = {seq: T[], len: number, diff: Array<DiffItem<T>>};
  * @param cache
  * @returns
  */
-export function calcLcs<T>(x: T[], y: T[], xl: number = x.length, yl: number = y.length, cache: Record<number, LcsResult<T>> = {}): LcsResult<T> {
+export function calcLcs<T extends number | string>(x: T[], y: T[], xl: number = x.length, yl: number = y.length, cache: Record<number, LcsResult<T>> = {}): LcsResult<T> {
     if (xl === 0) {
         return {
             len: 0,
@@ -91,7 +91,17 @@ type CompactDiffItem<T> =
     | {o: CompactDiffItemType.same, v: T}
     | {o: CompactDiffItemType.modified, ov: T, nv: T};
 
-export function compactDiff<T>(lcsDiff: DiffItem<T>[]): CompactDiffItem<T>[] {
+/**
+ * By default LcsDiff uses only adding and removal operations.
+ * So it means that diff of [0, A, A, A, 0] -> [0, B, B, B, C, 0]
+ * will be something like [0, -A, -A, -A, +B, +B, +B, +C, 0].
+ *
+ * This function adds a new operation: 'modified'. So the same diff will be
+ * transformed to [0, A->B, A->B, A->B, +C, 0].
+ * @param lcsDiff
+ * @returns
+ */
+export function compactDiff<T extends number | string>(lcsDiff: DiffItem<T>[]): CompactDiffItem<T>[] {
     const result: CompactDiffItem<T>[] = [];
     let curAdded: T[] = [];
     let curRemoved: T[] = [];
@@ -183,11 +193,23 @@ export function compactDiffMap<T, R>(cd: CompactDiffItem<T>[], fn: (input: T) =>
     });
 }
 
-export function calcJsonArrayDiff(a1: any[], a2: any[]) {
+/**
+ * Calculates the diff for arrays of objects.
+ *
+ * While `calcLcs` works with primitive types that support
+ * `===` properly it will work worse with objects.
+ *
+ * `calcJsonArrayDiff` uses a `hashing` algorithm to encode array of
+ * JSONable objects to primitive values, calculates the diff and decode it back;
+ * @param fromArray
+ * @param toArray
+ * @returns
+ */
+export function calcJsonArrayDiff<T>(fromArray: T[], toArray: T[]): CompactDiffItem<T>[] {
     const hashStore = new JsonHashStore();
 
-    const a1Hashed = a1.map(i => hashStore.encode(i));
-    const a2Hashed = a2.map(i => hashStore.encode(i));
+    const a1Hashed = fromArray.map(i => hashStore.encode(i));
+    const a2Hashed = toArray.map(i => hashStore.encode(i));
 
     const lcsDiff = calcLcs(a1Hashed, a2Hashed);
     const compactedDiff = compactDiff(lcsDiff.diff);
