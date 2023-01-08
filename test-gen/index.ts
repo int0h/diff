@@ -4,7 +4,7 @@ const genAlphabet = (fromChar: string, toChar: string) => {
     const alphabetArray: string[] = [];
     const fromCode = fromChar.charCodeAt(0);
     const toCode = toChar.charCodeAt(0);
-    for (let i = fromChar.charCodeAt(0); i <= toCode; i++) {
+    for (let i = fromCode; i <= toCode; i++) {
         alphabetArray.push(String.fromCharCode(i));
     }
     return alphabetArray;
