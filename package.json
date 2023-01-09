@@ -1,5 +1,8 @@
 {
   "name": "@int0h-dev/diff",
+  "publishConfig": {
+    "access": "public"
+  },
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
