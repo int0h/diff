@@ -30,11 +30,16 @@ type PrepareJsonDiffParams = {
     ident: string;
     leaveSpace?: boolean;
     firstLinePrefix?: string;
+    hideSame?: boolean;
 }
 
-export function diffToLines({diff, ident, viewSide, leaveSpace, firstLinePrefix = ''}: PrepareJsonDiffParams): DiffJsonLine[] {
+export function diffToLines({diff, ident, viewSide, leaveSpace, firstLinePrefix = '', hideSame = false}: PrepareJsonDiffParams): DiffJsonLine[] {
     if (diff.type === DiffType.same) {
-        return toJsonLines(diff.originalValue, 'same', ident, firstLinePrefix);
+        if (hideSame) {
+            return [];
+        } else {
+            return toJsonLines(diff.originalValue, 'same', ident, firstLinePrefix);
+        }
     }
     if (diff.type === DiffType.added) {
         if (viewSide !== 'old') {

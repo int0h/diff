@@ -127,7 +127,8 @@ export function calcDiff(originalValue: any, newValue: any): Diff<any> {
             };
         }
     }
-    if (isEmptyObj(objectDiff)) {
+    const changedProps = Object.values(objectDiff).filter(p => p.type !== DiffType.same);
+    if (changedProps.length === 0) {
         return {
             type: DiffType.same,
             originalValue,
