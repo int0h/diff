@@ -94,6 +94,7 @@ export function diffToLines({diff, ident, viewSide, leaveSpace, firstLinePrefix 
                     viewSide,
                     ident,
                     firstLinePrefix: JSON.stringify(key) + ': ',
+                    hideSame,
                 }), ident);
                 if (index < pairs.length - 1 && propDiffLines.length > 0) {
                     propDiffLines[propDiffLines.length - 1].str += ',';
@@ -117,6 +118,7 @@ export function diffToLines({diff, ident, viewSide, leaveSpace, firstLinePrefix 
                     diff: itemDiff,
                     viewSide,
                     ident,
+                    hideSame,
                 }), ident);
                 if (index < diff.items.length - 1 && propDiffLines.length > 0) {
                     propDiffLines[propDiffLines.length - 1].str += ',';
