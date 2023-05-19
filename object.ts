@@ -47,10 +47,10 @@ export type Diff<T> = {
     type: DiffType.objectDiff;
     originalValue: T;
     newValue: T;
-    properties: Record<keyof T, Diff<T>>;
+    properties: {[K in keyof T]: Diff<T[K]>};
 } | {
     type: DiffType.arrayDiff;
-    items: Array<Diff<T>>;
+    items: Array<Diff<T[keyof T]>>;
     originalValue: T;
     newValue: T;
 };
