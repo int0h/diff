@@ -45,10 +45,14 @@ export type Diff<T> = {
     newValue: T;
 } | {
     type: DiffType.objectDiff;
+    originalValue: T;
+    newValue: T;
     properties: Record<keyof T, Diff<T>>;
 } | {
     type: DiffType.arrayDiff;
     items: Array<Diff<T>>;
+    originalValue: T;
+    newValue: T;
 };
 
 export function calcDiff(originalValue: any, newValue: any): Diff<any> {
@@ -69,7 +73,6 @@ export function calcDiff(originalValue: any, newValue: any): Diff<any> {
             newValue,
         };
     }
-    // for now arrays are un-diff-able
     if (Array.isArray(originalValue) || Array.isArray(newValue)) {
         if (JSON.stringify(originalValue) === JSON.stringify(newValue)) {
             return {
@@ -80,6 +83,8 @@ export function calcDiff(originalValue: any, newValue: any): Diff<any> {
         const arrDiff = calcJsonArrayDiff(originalValue, newValue);
         return {
             type: DiffType.arrayDiff,
+            originalValue,
+            newValue,
             items: arrDiff.map((i): Diff<any> => {
                 if (i.o === CompactDiffItemType.same) {
                     return {
@@ -137,5 +142,7 @@ export function calcDiff(originalValue: any, newValue: any): Diff<any> {
     return {
         type: DiffType.objectDiff,
         properties: objectDiff,
+        originalValue,
+        newValue,
     };
 }
